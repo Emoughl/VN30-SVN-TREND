@@ -1,0 +1,4 @@
+,0
+alpha = 0 (ngoài lề),52
+0 < alpha < C (đúng trên lề),9
+alpha = C (vi phạm lề),1670
