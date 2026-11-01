@@ -17,7 +17,7 @@ def load_features(path="../data/process/vn30_features.csv"):
 
 
 def scale(X_train, X_other):
-    #Chuẩn hóa về trung bình 0, độ lệch chuẩn 1. Chỉ học thang đo từ tập train.
+    # Chuẩn hóa dữ liệu về trung bình 0 và độ lệch chuẩn 1.
     scaler = StandardScaler().fit(X_train)
     return scaler.transform(X_train), scaler.transform(X_other)
 
@@ -35,7 +35,7 @@ def scores(y, pred, decision=None):
         "BalAcc": balanced_accuracy_score(y, pred),
         "F1": f1_score(y, pred, pos_label=1, zero_division=0),
         "MCC": matthews_corrcoef(y, pred),
-        "UpRate": np.mean(pred == 1),        # tỷ lệ dự đoán "Tăng"
+        "UpRate": np.mean(pred == 1),
     }
     if decision is not None and len(np.unique(y)) == 2:
         out["AUC"] = roc_auc_score(y, decision)
@@ -43,7 +43,7 @@ def scores(y, pred, decision=None):
 
 
 def summarize(df, cols):
-    #Gộp nhiều lần chạy thành chuỗi 'trung bình ± độ lệch chuẩn'.
+    # Tính trung bình và độ lệch chuẩn cho các kết quả.
     g = df.groupby("model", sort=False)[cols]
     mean, std = g.mean(), g.std().fillna(0)
     out = mean.copy().astype(object)
@@ -53,7 +53,7 @@ def summarize(df, cols):
 
 
 def expand_grid(grids):
-    #[{"C": [0.1, 1]}, ...] -> {"C": 0.1}, {"C": 1}, ... (mọi tổ hợp).
+    # Tạo tất cả các tổ hợp tham số từ một lưới (grid).
     for g in grids:
         keys = list(g)
         for values in itertools.product(*g.values()):
@@ -61,8 +61,7 @@ def expand_grid(grids):
 
 
 def tune_walk_forward(ModelClass, grids, data, metric="BalAcc"):
-    #Với mỗi bộ tham số: train trên mọi năm trước năm v, đo trên năm v (v = 2020, 2021, 2022),
-    #lấy trung bình 3 năm. Trả về bộ tốt nhất và bảng điểm của mọi bộ.
+    # Tìm bộ tham số tốt nhất bằng cách thử nghiệm qua các năm.
     folds = []
     for year in VAL_YEARS:
         tr = data.loc[:str(year - 1)]
@@ -71,17 +70,17 @@ def tune_walk_forward(ModelClass, grids, data, metric="BalAcc"):
         folds.append((X_tr, tr["y"].to_numpy(), X_va, va["y"].to_numpy()))
     rows = []
     for params in expand_grid(grids):
-        values = []
+        vals = []
         for X_tr, y_tr, X_va, y_va in folds:
             model = ModelClass(**params).fit(X_tr, y_tr)
-            values.append(scores(y_va, model.predict(X_va))[metric])
-        rows.append({"params": params, metric: float(np.mean(values)), "std": float(np.std(values))})
+            vals.append(scores(y_va, model.predict(X_va))[metric])
+        rows.append({"params": params, metric: float(np.mean(vals)), "std": float(np.std(vals))})
     best = max(rows, key=lambda row: row[metric])
     return best["params"], rows
 
 
 def evaluate_on_test(name, ModelClass, params, data, seeds=(0,)):
-    #Train 2016-2022 với tham số đã chọn, đo trên test 2023-2025 (cả kỳ và từng năm).
+    # Huấn luyện và đo lường trên tập dữ liệu kiểm tra độc lập.
     X_train, y_train, X_test, y_test, train, test = train_test(data)
     rows = []
     for seed in seeds:
@@ -98,29 +97,7 @@ def evaluate_on_test(name, ModelClass, params, data, seeds=(0,)):
 
 
 def linear_w(model, d):
-    #Mô hình tuyến tính f(x) = w.x + b  =>  b = f(0),  w_j = f(e_j) - b.
+    # Lấy vector trọng số w và bias b cho mô hình tuyến tính.
     b = model.decision_function(np.zeros((1, d)))[0]
     w = model.decision_function(np.eye(d)) - b
     return w, b
-
-
-def flip_near_boundary(y, r_next, rate):
-    #Đảo nhãn `rate` phần các phiên có |return ngày mai| nhỏ nhất (nhãn mơ hồ quanh biên).
-    y = y.copy()
-    k = int(round(rate * len(y)))
-    if k:
-        idx = np.argsort(np.abs(r_next))[:k]
-        y[idx] = -y[idx]
-    return y
-
-
-def add_outliers(X, y, rate, direction, shift=15.0, rng=None):
-    #Thêm `rate` phần điểm ngoại lai: lấy ngẫu nhiên điểm train, đẩy xa `shift` đơn vị
-    #theo hướng `direction` (hướng lớp Tăng) nhưng gán nhãn Giảm.
-    rng = rng or np.random.default_rng(0)
-    k = int(round(rate * len(y)))
-    if k == 0:
-        return X, y
-    d = direction / np.linalg.norm(direction)
-    idx = rng.choice(len(y), k, replace=False)
-    return np.vstack([X, X[idx] + shift * d]), np.r_[y, -np.ones(k, dtype=y.dtype)]
