@@ -1,5 +1,5 @@
-#Bốn mô hình của chuỗi SVM -> LS-SVM -> Pin-SVM -> Wave-SVM.
-#Cùng khung: min 1/2 ||w||^2 + C * sum c_i * L(u_i),  u_i = 1 - y_i f(x_i)."""
+# Bốn mô hình của chuỗi SVM -> LS-SVM -> Pin-SVM -> Wave-SVM.
+# Cùng khung: min 1/2 ||w||^2 + C * sum c_i * L(u_i),  u_i = 1 - y_i f(x_i).
 import time
 import numpy as np
 from cvxopt import matrix, solvers
@@ -9,7 +9,7 @@ solvers.options["show_progress"] = False
 
 
 def kernel_matrix(A, B, kernel="linear", gamma=0.1):
-    #Ma trận K[i, j] = K(A_i, B_j). Tuyến tính: tích vô hướng; RBF: exp(-gamma ||a - b||^2)."""
+    # Ma trận K[i, j] = K(A_i, B_j). Tuyến tính: tích vô hướng; RBF: exp(-gamma ||a - b||^2).
     if kernel == "linear":
         return A @ B.T
     sq = (A ** 2).sum(1)[:, None] + (B ** 2).sum(1)[None, :] - 2 * A @ B.T
@@ -17,7 +17,7 @@ def kernel_matrix(A, B, kernel="linear", gamma=0.1):
 
 
 def class_weights(y):
-    #Trọng số cân bằng lớp: c_i = n / (2 * số mẫu cùng lớp với i)."""
+    # Trọng số cân bằng lớp: c_i = n / (2 * số mẫu cùng lớp với i).
     n = len(y)
     n_pos = max(np.sum(y > 0), 1)
     n_neg = max(np.sum(y < 0), 1)
@@ -25,7 +25,7 @@ def class_weights(y):
 
 
 class BaseModel:
-    #Phần chung của 4 mô hình: tính trọng số lớp, bấm giờ, dự đoán bằng dấu của f(x)."""
+    # Phần chung của 4 mô hình: tính trọng số lớp, bấm giờ, dự đoán bằng dấu của f(x).
 
     def fit(self, X, y):
         X = np.asarray(X, float)
@@ -41,7 +41,7 @@ class BaseModel:
 
 
 class SVM(BaseModel):
-    #Baseline (Cortes & Vapnik 1995): hinge loss, giải đối ngẫu QP bằng SMO (thư viện libsvm)."""
+    # Baseline (Cortes & Vapnik 1995): hinge loss, giải đối ngẫu QP bằng SMO (thư viện libsvm).
 
     def __init__(self, C=1.0, kernel="linear", gamma=0.1, seed=0, balanced=True):
         self.C, self.kernel, self.gamma = C, kernel, gamma
@@ -57,8 +57,8 @@ class SVM(BaseModel):
 
 
 class LSSVM(BaseModel):
-    #Variant 1 (Suykens & Vandewalle 1999): squared loss + ràng buộc đẳng thức
-    #-> giải một hệ tuyến tính (n+1) x (n+1), không cần lặp."""
+    # Variant 1 (Suykens & Vandewalle 1999): squared loss + ràng buộc đẳng thức
+    # -> giải một hệ tuyến tính (n+1) x (n+1), không cần lặp.
 
     def __init__(self, C=1.0, kernel="linear", gamma=0.1, seed=0, balanced=True):
         self.C, self.kernel, self.gamma = C, kernel, gamma      # C đóng vai trò gamma của bài báo
@@ -84,8 +84,8 @@ class LSSVM(BaseModel):
 
 
 class PinSVM(BaseModel):
-    #Variant 2 (Huang, Shi & Suykens 2014): pinball loss.
-    #Đối ngẫu giống SVM, chỉ đổi hộp 0 <= alpha <= C thành -tau*C <= alpha <= C. Giải QP bằng cvxopt."""
+    # Variant 2 (Huang, Shi & Suykens 2014): pinball loss.
+    # Đối ngẫu giống SVM, chỉ đổi hộp 0 <= alpha <= C thành -tau*C <= alpha <= C. Giải QP bằng cvxopt.
 
     def __init__(self, C=1.0, tau=0.5, kernel="linear", gamma=0.1, seed=0, balanced=True):
         self.C, self.tau, self.kernel, self.gamma = C, tau, kernel, gamma
@@ -123,14 +123,14 @@ def wave_loss(u, lam=1.0, a=1.5):
 
 
 def wave_grad(u, lam=1.0, a=1.5):
-    #Đạo hàm đúng: L'(u) = u e^{au} (2 + a u) / (1 + lam u^2 e^{au})^2.
+    # Đạo hàm đúng: L'(u) = u e^{au} (2 + a u) / (1 + lam u^2 e^{au})^2.
     e = np.exp(np.clip(a * u, -50, 50))
     return u * e * (2 + a * u) / (1 + lam * u ** 2 * e) ** 2
 
 
 class WaveSVM(BaseModel):
-    #SOTA (Akhtar, Tanveer & Arshad 2024), theo Algorithm 1 của bài báo, tối ưu bằng Adam.
-    #linear: theta = [w, b] trên x mở rộng [x, 1];  rbf: theta = gamma_j trong w = sum gamma_j phi(x_j)."""
+    # SOTA (Akhtar, Tanveer & Arshad 2024), theo Algorithm 1 của bài báo, tối ưu bằng Adam.
+    # linear: theta = [w, b] trên x mở rộng [x, 1];  rbf: theta = gamma_j trong w = sum gamma_j phi(x_j).
 
     def __init__(self, C=1.0, lam=1.0, a=1.5, kernel="linear", gamma=0.1, k=32, lr=0.01,
                  max_iter=1000, beta1=0.9, beta2=0.999, eps=1e-6, tol=1e-6, seed=0,
@@ -141,7 +141,7 @@ class WaveSVM(BaseModel):
         self.seed, self.balanced, self.init = seed, balanced, init
 
     def _features(self, X):
-        #Linear: thêm cột 1 để gộp b vào w. RBF: mỗi điểm biểu diễn bằng K(x, x_j) với mọi x_j train.
+        # Linear: thêm cột 1 để gộp b vào w. RBF: mỗi điểm biểu diễn bằng K(x, x_j) với mọi x_j train.
         if self.kernel == "linear":
             return np.c_[X, np.ones(len(X))]
         return kernel_matrix(X, self.X_train_, self.kernel, self.gamma)

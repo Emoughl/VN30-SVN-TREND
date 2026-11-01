@@ -17,7 +17,7 @@ def load_features(path="../data/process/vn30_features.csv"):
 
 
 def scale(X_train, X_other):
-    #Chuẩn hóa về trung bình 0, độ lệch chuẩn 1. Chỉ học thang đo từ tập train."""
+    #Chuẩn hóa về trung bình 0, độ lệch chuẩn 1. Chỉ học thang đo từ tập train.
     scaler = StandardScaler().fit(X_train)
     return scaler.transform(X_train), scaler.transform(X_other)
 
@@ -43,7 +43,7 @@ def scores(y, pred, decision=None):
 
 
 def summarize(df, cols):
-    #Gộp nhiều lần chạy thành chuỗi 'trung bình ± độ lệch chuẩn'."""
+    #Gộp nhiều lần chạy thành chuỗi 'trung bình ± độ lệch chuẩn'.
     g = df.groupby("model", sort=False)[cols]
     mean, std = g.mean(), g.std().fillna(0)
     out = mean.copy().astype(object)
@@ -53,7 +53,7 @@ def summarize(df, cols):
 
 
 def expand_grid(grids):
-    #[{"C": [0.1, 1]}, ...] -> {"C": 0.1}, {"C": 1}, ... (mọi tổ hợp)."""
+    #[{"C": [0.1, 1]}, ...] -> {"C": 0.1}, {"C": 1}, ... (mọi tổ hợp).
     for g in grids:
         keys = list(g)
         for values in itertools.product(*g.values()):
@@ -62,7 +62,7 @@ def expand_grid(grids):
 
 def tune_walk_forward(ModelClass, grids, data, metric="BalAcc"):
     #Với mỗi bộ tham số: train trên mọi năm trước năm v, đo trên năm v (v = 2020, 2021, 2022),
-    #lấy trung bình 3 năm. Trả về bộ tốt nhất và bảng điểm của mọi bộ."""
+    #lấy trung bình 3 năm. Trả về bộ tốt nhất và bảng điểm của mọi bộ.
     folds = []
     for year in VAL_YEARS:
         tr = data.loc[:str(year - 1)]
@@ -81,7 +81,7 @@ def tune_walk_forward(ModelClass, grids, data, metric="BalAcc"):
 
 
 def evaluate_on_test(name, ModelClass, params, data, seeds=(0,)):
-    #Train 2016-2022 với tham số đã chọn, đo trên test 2023-2025 (cả kỳ và từng năm)."""
+    #Train 2016-2022 với tham số đã chọn, đo trên test 2023-2025 (cả kỳ và từng năm).
     X_train, y_train, X_test, y_test, train, test = train_test(data)
     rows = []
     for seed in seeds:
@@ -116,7 +116,7 @@ def flip_near_boundary(y, r_next, rate):
 
 def add_outliers(X, y, rate, direction, shift=15.0, rng=None):
     #Thêm `rate` phần điểm ngoại lai: lấy ngẫu nhiên điểm train, đẩy xa `shift` đơn vị
-    #theo hướng `direction` (hướng lớp Tăng) nhưng gán nhãn Giảm."""
+    #theo hướng `direction` (hướng lớp Tăng) nhưng gán nhãn Giảm.
     rng = rng or np.random.default_rng(0)
     k = int(round(rate * len(y)))
     if k == 0:
